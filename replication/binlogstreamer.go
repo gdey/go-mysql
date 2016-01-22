@@ -1,6 +1,7 @@
 package replication
 
 import (
+	"sync"
 	"time"
 
 	"github.com/juju/errors"
@@ -15,34 +16,47 @@ var (
 type BinlogStreamer struct {
 	ch  chan *BinlogEvent
 	ech chan error
+	sync.Mutex
 	err error
 }
 
+func (s *BinlogStreamer) GetEventChannel() <-chan *BinlogEvent {
+	return s.ch
+}
+func (s *BinlogStreamer) GetErrorChannel() <-chan error {
+	return s.ech
+}
+
+func (s *BinlogStreamer) needSyncAgain() bool {
+	s.Lock()
+	defer s.Unlock()
+	return s.err != nil
+}
 func (s *BinlogStreamer) GetEvent() (*BinlogEvent, error) {
-	if s.err != nil {
+	if s.needSyncAgain() {
 		return nil, ErrNeedSyncAgain
 	}
 
 	select {
 	case c := <-s.ch:
 		return c, nil
-	case s.err = <-s.ech:
-		return nil, s.err
+	case err := <-s.ech:
+		return nil, err
 	}
 }
 
 // if timeout, ErrGetEventTimeout will returns
 // timeout value won't be set too large, otherwise it may waste lots of memory
 func (s *BinlogStreamer) GetEventTimeout(d time.Duration) (*BinlogEvent, error) {
-	if s.err != nil {
+	if s.needSyncAgain() {
 		return nil, ErrNeedSyncAgain
 	}
 
 	select {
 	case c := <-s.ch:
 		return c, nil
-	case s.err = <-s.ech:
-		return nil, s.err
+	case err := <-s.ech:
+		return nil, err
 	case <-time.After(d):
 		return nil, ErrGetEventTimeout
 	}
@@ -53,9 +67,12 @@ func (s *BinlogStreamer) close() {
 }
 
 func (s *BinlogStreamer) closeWithError(err error) {
-	if err == nil {
+	if s.needSyncAgain() {
 		err = ErrSyncClosed
 	}
+	s.Lock()
+	s.err = err
+	s.Unlock()
 	select {
 	case s.ech <- err:
 	default:
@@ -65,8 +82,8 @@ func (s *BinlogStreamer) closeWithError(err error) {
 func newBinlogStreamer() *BinlogStreamer {
 	s := new(BinlogStreamer)
 
-	s.ch = make(chan *BinlogEvent, 1024)
-	s.ech = make(chan error, 4)
+	s.ch = make(chan *BinlogEvent)
+	s.ech = make(chan error)
 
 	return s
 }
