@@ -9,10 +9,10 @@ import (
 	"io"
 	"strings"
 
+	"github.com/gdey/go-mysql/client"
+	"github.com/gdey/go-mysql/mysql"
+	"github.com/gdey/go/hack"
 	"github.com/juju/errors"
-	"github.com/siddontang/go-mysql/client"
-	"github.com/siddontang/go-mysql/mysql"
-	"github.com/siddontang/go/hack"
 )
 
 type driver struct {

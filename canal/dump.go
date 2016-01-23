@@ -4,10 +4,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gdey/go-mysql/dump"
+	"github.com/gdey/go-mysql/schema"
+	"github.com/gdey/go/log"
 	"github.com/juju/errors"
-	"github.com/siddontang/go-mysql/dump"
-	"github.com/siddontang/go-mysql/schema"
-	"github.com/siddontang/go/log"
 )
 
 type dumpParseHandler struct {

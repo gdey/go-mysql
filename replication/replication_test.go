@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/siddontang/go-mysql/client"
-	"github.com/siddontang/go-mysql/mysql"
+	"github.com/gdey/go-mysql/client"
+	"github.com/gdey/go-mysql/mysql"
 	. "gopkg.in/check.v1"
 )
 

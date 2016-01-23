@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gdey/go-mysql/mysql"
+	"github.com/gdey/go/hack"
 	"github.com/juju/errors"
-	"github.com/siddontang/go-mysql/mysql"
-	"github.com/siddontang/go/hack"
 )
 
 type TableMapEvent struct {

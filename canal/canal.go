@@ -10,14 +10,14 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gdey/go-mysql/client"
+	"github.com/gdey/go-mysql/dump"
+	"github.com/gdey/go-mysql/mysql"
+	"github.com/gdey/go-mysql/replication"
+	"github.com/gdey/go-mysql/schema"
+	"github.com/gdey/go/log"
+	"github.com/gdey/go/sync2"
 	"github.com/juju/errors"
-	"github.com/siddontang/go-mysql/client"
-	"github.com/siddontang/go-mysql/dump"
-	"github.com/siddontang/go-mysql/mysql"
-	"github.com/siddontang/go-mysql/replication"
-	"github.com/siddontang/go-mysql/schema"
-	"github.com/siddontang/go/log"
-	"github.com/siddontang/go/sync2"
 )
 
 var errCanalClosed = errors.New("canal was closed")

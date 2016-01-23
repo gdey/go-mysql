@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/gdey/go-mysql/mysql"
+	"github.com/gdey/go/ioutil2"
+	"github.com/gdey/go/log"
 	"github.com/juju/errors"
-	"github.com/siddontang/go-mysql/mysql"
-	"github.com/siddontang/go/ioutil2"
-	"github.com/siddontang/go/log"
 )
 
 type masterInfo struct {

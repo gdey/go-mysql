@@ -1,8 +1,8 @@
 package canal
 
 import (
+	"github.com/gdey/go-mysql/schema"
 	"github.com/juju/errors"
-	"github.com/siddontang/go-mysql/schema"
 )
 
 const (

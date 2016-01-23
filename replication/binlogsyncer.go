@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gdey/go-mysql/client"
+	"github.com/gdey/go-mysql/mysql"
 	"github.com/juju/errors"
 	"github.com/satori/go.uuid"
-	"github.com/siddontang/go-mysql/client"
-	"github.com/siddontang/go-mysql/mysql"
 )
 
 var (

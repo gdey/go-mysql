@@ -3,10 +3,10 @@ package canal
 import (
 	"time"
 
+	"github.com/gdey/go-mysql/mysql"
+	"github.com/gdey/go-mysql/replication"
+	"github.com/gdey/go/log"
 	"github.com/juju/errors"
-	"github.com/siddontang/go-mysql/mysql"
-	"github.com/siddontang/go-mysql/replication"
-	"github.com/siddontang/go/log"
 )
 
 func (c *Canal) startSyncBinlog() error {

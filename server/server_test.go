@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	mysql "github.com/gdey/go-mysql/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/juju/errors"
-	mysql "github.com/siddontang/go-mysql/mysql"
 	. "gopkg.in/check.v1"
 )
 

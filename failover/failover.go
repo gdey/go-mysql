@@ -1,8 +1,8 @@
 package failover
 
 import (
+	"github.com/gdey/go-mysql/mysql"
 	"github.com/juju/errors"
-	"github.com/siddontang/go-mysql/mysql"
 )
 
 // Failover will do below things after the master down
