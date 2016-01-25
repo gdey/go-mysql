@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/juju/errors"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
 // Like mysqlbinlog remote raw backup
 // Backup remote binlog from position (filename, offset) and write in backupDir
-func (b *BinlogSyncer) StartBackup(backupDir string, p Position, timeout time.Duration) error {
+func (b *BinlogSyncer) StartBackup(backupDir string, p mysql.Position, timeout time.Duration) error {
 	if timeout == 0 {
 		// a very long timeout here
 		timeout = 30 * 3600 * 24 * time.Second

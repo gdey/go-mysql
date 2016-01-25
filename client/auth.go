@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/juju/errors"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
 func (c *Conn) readInitialHandshake() error {
@@ -14,11 +14,11 @@ func (c *Conn) readInitialHandshake() error {
 		return errors.Trace(err)
 	}
 
-	if data[0] == ERR_HEADER {
+	if data[0] == mysql.ERR_HEADER {
 		return errors.New("read initial handshake error")
 	}
 
-	if data[0] < MinProtocolVersion {
+	if data[0] < mysql.MinProtocolVersion {
 		return errors.Errorf("invalid protocol version %d, must >= 10", data[0])
 	}
 
@@ -69,8 +69,8 @@ func (c *Conn) readInitialHandshake() error {
 
 func (c *Conn) writeAuthHandshake() error {
 	// Adjust client capability flags based on server support
-	capability := CLIENT_PROTOCOL_41 | CLIENT_SECURE_CONNECTION |
-		CLIENT_LONG_PASSWORD | CLIENT_TRANSACTIONS | CLIENT_LONG_FLAG
+	capability := mysql.CLIENT_PROTOCOL_41 | mysql.CLIENT_SECURE_CONNECTION |
+		mysql.CLIENT_LONG_PASSWORD | mysql.CLIENT_TRANSACTIONS | mysql.CLIENT_LONG_FLAG
 
 	capability &= c.capability
 
@@ -85,12 +85,12 @@ func (c *Conn) writeAuthHandshake() error {
 	length += len(c.user) + 1
 
 	//we only support secure connection
-	auth := CalcPassword(c.salt, []byte(c.password))
+	auth := mysql.CalcPassword(c.salt, []byte(c.password))
 
 	length += 1 + len(auth)
 
 	if len(c.db) > 0 {
-		capability |= CLIENT_CONNECT_WITH_DB
+		capability |= mysql.CLIENT_CONNECT_WITH_DB
 
 		length += len(c.db) + 1
 	}
@@ -113,7 +113,7 @@ func (c *Conn) writeAuthHandshake() error {
 
 	//Charset [1 byte]
 	//use default collation id 33 here, is utf-8
-	data[12] = byte(DEFAULT_COLLATION_ID)
+	data[12] = byte(mysql.DEFAULT_COLLATION_ID)
 
 	//Filler [23 bytes] (all 0x00)
 	pos := 13 + 23

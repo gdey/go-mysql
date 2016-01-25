@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/juju/errors"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 	"github.com/siddontang/go-mysql/packet"
 )
 
@@ -55,7 +55,7 @@ func Connect(addr string, user string, password string, dbName string) (*Conn, e
 	c.db = dbName
 
 	//use default charset here, utf-8
-	c.charset = DEFAULT_CHARSET
+	c.charset = mysql.DEFAULT_CHARSET
 
 	if err = c.handshake(); err != nil {
 		return nil, errors.Trace(err)
@@ -90,7 +90,7 @@ func (c *Conn) Close() error {
 }
 
 func (c *Conn) Ping() error {
-	if err := c.writeCommand(COM_PING); err != nil {
+	if err := c.writeCommand(mysql.COM_PING); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -106,7 +106,7 @@ func (c *Conn) UseDB(dbName string) error {
 		return nil
 	}
 
-	if err := c.writeCommandStr(COM_INIT_DB, dbName); err != nil {
+	if err := c.writeCommandStr(mysql.COM_INIT_DB, dbName); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -122,14 +122,14 @@ func (c *Conn) GetDB() string {
 	return c.db
 }
 
-func (c *Conn) Execute(command string, args ...interface{}) (*Result, error) {
+func (c *Conn) Execute(command string, args ...interface{}) (*mysql.Result, error) {
 	if len(args) == 0 {
 		return c.exec(command)
 	} else {
 		if s, err := c.Prepare(command); err != nil {
 			return nil, errors.Trace(err)
 		} else {
-			var r *Result
+			var r *mysql.Result
 			r, err = s.Execute(args...)
 			s.Close()
 			return r, err
@@ -165,8 +165,8 @@ func (c *Conn) SetCharset(charset string) error {
 	}
 }
 
-func (c *Conn) FieldList(table string, wildcard string) ([]*Field, error) {
-	if err := c.writeCommandStrStr(COM_FIELD_LIST, table, wildcard); err != nil {
+func (c *Conn) FieldList(table string, wildcard string) ([]*mysql.Field, error) {
+	if err := c.writeCommandStrStr(mysql.COM_FIELD_LIST, table, wildcard); err != nil {
 		return nil, errors.Trace(err)
 	}
 
@@ -175,9 +175,9 @@ func (c *Conn) FieldList(table string, wildcard string) ([]*Field, error) {
 		return nil, errors.Trace(err)
 	}
 
-	fs := make([]*Field, 0, 4)
-	var f *Field
-	if data[0] == ERR_HEADER {
+	fs := make([]*mysql.Field, 0, 4)
+	var f *mysql.Field
+	if data[0] == mysql.ERR_HEADER {
 		return nil, c.handleErrorPacket(data)
 	} else {
 		for {
@@ -190,7 +190,7 @@ func (c *Conn) FieldList(table string, wildcard string) ([]*Field, error) {
 				return fs, nil
 			}
 
-			if f, err = FieldData(data).Parse(); err != nil {
+			if f, err = mysql.FieldData(data).Parse(); err != nil {
 				return nil, errors.Trace(err)
 			}
 			fs = append(fs, f)
@@ -209,11 +209,11 @@ func (c *Conn) SetAutoCommit() error {
 }
 
 func (c *Conn) IsAutoCommit() bool {
-	return c.status&SERVER_STATUS_AUTOCOMMIT > 0
+	return c.status&mysql.SERVER_STATUS_AUTOCOMMIT > 0
 }
 
 func (c *Conn) IsInTransaction() bool {
-	return c.status&SERVER_STATUS_IN_TRANS > 0
+	return c.status&mysql.SERVER_STATUS_IN_TRANS > 0
 }
 
 func (c *Conn) GetCharset() string {
@@ -224,7 +224,7 @@ func (c *Conn) GetConnectionID() uint32 {
 	return c.connectionID
 }
 
-func (c *Conn) HandleOKPacket(data []byte) *Result {
+func (c *Conn) HandleOKPacket(data []byte) *mysql.Result {
 	r, _ := c.handleOKPacket(data)
 	return r
 }
@@ -233,12 +233,12 @@ func (c *Conn) HandleErrorPacket(data []byte) error {
 	return c.handleErrorPacket(data)
 }
 
-func (c *Conn) ReadOKPacket() (*Result, error) {
+func (c *Conn) ReadOKPacket() (*mysql.Result, error) {
 	return c.readOK()
 }
 
-func (c *Conn) exec(query string) (*Result, error) {
-	if err := c.writeCommandStr(COM_QUERY, query); err != nil {
+func (c *Conn) exec(query string) (*mysql.Result, error) {
+	if err := c.writeCommandStr(mysql.COM_QUERY, query); err != nil {
 		return nil, errors.Trace(err)
 	}
 

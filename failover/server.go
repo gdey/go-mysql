@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/siddontang/go-mysql/client"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
 type User struct {
@@ -38,7 +38,7 @@ func (s *Server) Close() {
 	}
 }
 
-func (s *Server) Execute(cmd string, args ...interface{}) (r *Result, err error) {
+func (s *Server) Execute(cmd string, args ...interface{}) (r *mysql.Result, err error) {
 	retryNum := 3
 	for i := 0; i < retryNum; i++ {
 		if s.conn == nil {
@@ -49,9 +49,9 @@ func (s *Server) Execute(cmd string, args ...interface{}) (r *Result, err error)
 		}
 
 		r, err = s.conn.Execute(cmd, args...)
-		if err != nil && err != ErrBadConn {
+		if err != nil && err != mysql.ErrBadConn {
 			return
-		} else if err == ErrBadConn {
+		} else if err == mysql.ErrBadConn {
 			s.conn = nil
 			continue
 		} else {
@@ -76,7 +76,7 @@ func (s *Server) StopSlaveIOThread() error {
 	return err
 }
 
-func (s *Server) SlaveStatus() (*Resultset, error) {
+func (s *Server) SlaveStatus() (*mysql.Resultset, error) {
 	r, err := s.Execute("SHOW SLAVE STATUS")
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (s *Server) SlaveStatus() (*Resultset, error) {
 	}
 }
 
-func (s *Server) MasterStatus() (*Resultset, error) {
+func (s *Server) MasterStatus() (*mysql.Resultset, error) {
 	r, err := s.Execute("SHOW MASTER STATUS")
 	if err != nil {
 		return nil, err
@@ -143,32 +143,32 @@ func (s *Server) UnlockTables() error {
 }
 
 // Get current binlog filename and position read from master
-func (s *Server) FetchSlaveReadPos() (Position, error) {
+func (s *Server) FetchSlaveReadPos() (mysql.Position, error) {
 	r, err := s.SlaveStatus()
 	if err != nil {
-		return Position{}, err
+		return mysql.Position{}, err
 	}
 
 	fname, _ := r.GetStringByName(0, "Master_Log_File")
 	pos, _ := r.GetIntByName(0, "Read_Master_Log_Pos")
 
-	return Position{fname, uint32(pos)}, nil
+	return mysql.Position{fname, uint32(pos)}, nil
 }
 
 // Get current executed binlog filename and position from master
-func (s *Server) FetchSlaveExecutePos() (Position, error) {
+func (s *Server) FetchSlaveExecutePos() (mysql.Position, error) {
 	r, err := s.SlaveStatus()
 	if err != nil {
-		return Position{}, err
+		return mysql.Position{}, err
 	}
 
 	fname, _ := r.GetStringByName(0, "Relay_Master_Log_File")
 	pos, _ := r.GetIntByName(0, "Exec_Master_Log_Pos")
 
-	return Position{fname, uint32(pos)}, nil
+	return mysql.Position{fname, uint32(pos)}, nil
 }
 
-func (s *Server) MasterPosWait(pos Position, timeout int) error {
+func (s *Server) MasterPosWait(pos mysql.Position, timeout int) error {
 	_, err := s.Execute(fmt.Sprintf("SELECT MASTER_POS_WAIT('%s', %d, %d)", pos.Name, pos.Pos, timeout))
 	return err
 }

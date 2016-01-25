@@ -12,7 +12,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/satori/go.uuid"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
 const (
@@ -96,7 +96,7 @@ func (h *EventHeader) Decode(data []byte) error {
 
 func (h *EventHeader) Dump(w io.Writer) {
 	fmt.Fprintf(w, "=== %s ===\n", EventType(h.EventType))
-	fmt.Fprintf(w, "Date: %s\n", time.Unix(int64(h.Timestamp), 0).Format(TimeFormat))
+	fmt.Fprintf(w, "Date: %s\n", time.Unix(int64(h.Timestamp), 0).Format(mysql.TimeFormat))
 	fmt.Fprintf(w, "Log position: %d\n", h.LogPos)
 	fmt.Fprintf(w, "Event size: %d\n", h.EventSize)
 }
@@ -411,7 +411,7 @@ func (e *MariadbBinlogCheckPointEvent) Dump(w io.Writer) {
 }
 
 type MariadbGTIDEvent struct {
-	GTID MariadbGTID
+	GTID mysql.MariadbGTID
 }
 
 func (e *MariadbGTIDEvent) Decode(data []byte) error {
@@ -429,7 +429,7 @@ func (e *MariadbGTIDEvent) Dump(w io.Writer) {
 }
 
 type MariadbGTIDListEvent struct {
-	GTIDs []MariadbGTID
+	GTIDs []mysql.MariadbGTID
 }
 
 func (e *MariadbGTIDListEvent) Decode(data []byte) error {
@@ -439,7 +439,7 @@ func (e *MariadbGTIDListEvent) Decode(data []byte) error {
 
 	count := v & uint32((1<<28)-1)
 
-	e.GTIDs = make([]MariadbGTID, count)
+	e.GTIDs = make([]mysql.MariadbGTID, count)
 
 	for i := uint32(0); i < count; i++ {
 		e.GTIDs[i].DomainID = binary.LittleEndian.Uint32(data[pos:])

@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/juju/errors"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
 type MysqlGTIDHandler struct {
@@ -29,7 +29,7 @@ func (h *MysqlGTIDHandler) FindBestSlaves(slaves []*Server) ([]*Server, error) {
 
 	bestSlaves := []*Server{}
 
-	ps := make([]Position, len(slaves))
+	ps := make([]mysql.Position, len(slaves))
 
 	lastIndex := -1
 

@@ -10,7 +10,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/satori/go.uuid"
 	"github.com/siddontang/go-mysql/client"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
 var (
@@ -39,7 +39,7 @@ type BinlogSyncer struct {
 
 	parser *BinlogParser
 
-	nextPos Position
+	nextPos mysql.Position
 
 	running         bool
 	semiSyncEnabled bool
@@ -251,7 +251,7 @@ func (b *BinlogSyncer) startDumpStream() *BinlogStreamer {
 	return s
 }
 
-func (b *BinlogSyncer) StartSync(pos Position) (*BinlogStreamer, error) {
+func (b *BinlogSyncer) StartSync(pos mysql.Position) (*BinlogStreamer, error) {
 	b.m.Lock()
 	defer b.m.Unlock()
 
@@ -284,7 +284,7 @@ func (b *BinlogSyncer) SetRawMode(mode bool) error {
 	return nil
 }
 
-func (b *BinlogSyncer) ExecuteSql(query string, args ...interface{}) (*Result, error) {
+func (b *BinlogSyncer) ExecuteSql(query string, args ...interface{}) (*mysql.Result, error) {
 	b.m.Lock()
 	defer b.m.Unlock()
 
@@ -295,7 +295,7 @@ func (b *BinlogSyncer) ExecuteSql(query string, args ...interface{}) (*Result, e
 	return b.c.Execute(query, args...)
 }
 
-func (b *BinlogSyncer) StartSyncGTID(gset GTIDSet) (*BinlogStreamer, error) {
+func (b *BinlogSyncer) StartSyncGTID(gset mysql.GTIDSet) (*BinlogStreamer, error) {
 	b.m.Lock()
 	defer b.m.Unlock()
 
@@ -305,9 +305,9 @@ func (b *BinlogSyncer) StartSyncGTID(gset GTIDSet) (*BinlogStreamer, error) {
 
 	var err error
 	switch b.flavor {
-	case MySQLFlavor:
+	case mysql.MySQLFlavor:
 		err = b.writeBinlogDumpMysqlGTIDCommand(gset)
-	case MariaDBFlavor:
+	case mysql.MariaDBFlavor:
 		err = b.writeBinlogDumpMariadbGTIDCommand(gset)
 	default:
 		err = fmt.Errorf("invalid flavor %s", b.flavor)
@@ -320,13 +320,13 @@ func (b *BinlogSyncer) StartSyncGTID(gset GTIDSet) (*BinlogStreamer, error) {
 	return b.startDumpStream(), nil
 }
 
-func (b *BinlogSyncer) writeBinglogDumpCommand(p Position) error {
+func (b *BinlogSyncer) writeBinglogDumpCommand(p mysql.Position) error {
 	b.c.ResetSequence()
 
 	data := make([]byte, 4+1+4+2+4+len(p.Name))
 
 	pos := 4
-	data[pos] = COM_BINLOG_DUMP
+	data[pos] = mysql.COM_BINLOG_DUMP
 	pos++
 
 	binary.LittleEndian.PutUint32(data[pos:], p.Pos)
@@ -343,15 +343,15 @@ func (b *BinlogSyncer) writeBinglogDumpCommand(p Position) error {
 	return b.c.WritePacket(data)
 }
 
-func (b *BinlogSyncer) writeBinlogDumpMysqlGTIDCommand(gset GTIDSet) error {
-	p := Position{"", 4}
+func (b *BinlogSyncer) writeBinlogDumpMysqlGTIDCommand(gset mysql.GTIDSet) error {
+	p := mysql.Position{"", 4}
 	gtidData := gset.Encode()
 
 	b.c.ResetSequence()
 
 	data := make([]byte, 4+1+2+4+4+len(p.Name)+8+4+len(gtidData))
 	pos := 4
-	data[pos] = COM_BINLOG_DUMP_GTID
+	data[pos] = mysql.COM_BINLOG_DUMP_GTID
 	pos++
 
 	binary.LittleEndian.PutUint16(data[pos:], 0)
@@ -379,7 +379,7 @@ func (b *BinlogSyncer) writeBinlogDumpMysqlGTIDCommand(gset GTIDSet) error {
 	return b.c.WritePacket(data)
 }
 
-func (b *BinlogSyncer) writeBinlogDumpMariadbGTIDCommand(gset GTIDSet) error {
+func (b *BinlogSyncer) writeBinlogDumpMariadbGTIDCommand(gset mysql.GTIDSet) error {
 	// Copy from vitess
 
 	startPos := gset.String()
@@ -406,7 +406,7 @@ func (b *BinlogSyncer) writeBinlogDumpMariadbGTIDCommand(gset GTIDSet) error {
 	}
 
 	// Since we use @slave_connect_state, the file and position here are ignored.
-	return b.writeBinglogDumpCommand(Position{"", 0})
+	return b.writeBinglogDumpCommand(mysql.Position{"", 0})
 }
 
 func (b *BinlogSyncer) writeRegisterSlaveCommand() error {
@@ -418,7 +418,7 @@ func (b *BinlogSyncer) writeRegisterSlaveCommand() error {
 	data := make([]byte, 4+1+4+1+len(hostname)+1+len(b.user)+1+len(b.password)+2+4+4)
 	pos := 4
 
-	data[pos] = COM_REGISTER_SLAVE
+	data[pos] = mysql.COM_REGISTER_SLAVE
 	pos++
 
 	binary.LittleEndian.PutUint32(data[pos:], b.serverID)
@@ -452,7 +452,7 @@ func (b *BinlogSyncer) writeRegisterSlaveCommand() error {
 	return b.c.WritePacket(data)
 }
 
-func (b *BinlogSyncer) replySemiSyncACK(p Position) error {
+func (b *BinlogSyncer) replySemiSyncACK(p mysql.Position) error {
 	b.c.ResetSequence()
 
 	data := make([]byte, 4+1+8+len(p.Name))
@@ -480,7 +480,7 @@ func (b *BinlogSyncer) replySemiSyncACK(p Position) error {
 func (b *BinlogSyncer) onStream(s *BinlogStreamer) {
 	defer func() {
 		if e := recover(); e != nil {
-			s.closeWithError(fmt.Errorf("Err: %v\n Stack: %s", e, Pstack()))
+			s.closeWithError(fmt.Errorf("Err: %v\n Stack: %s", e, mysql.Pstack()))
 		}
 		b.wg.Done()
 	}()
@@ -493,12 +493,12 @@ func (b *BinlogSyncer) onStream(s *BinlogStreamer) {
 		}
 
 		switch data[0] {
-		case OK_HEADER:
+		case mysql.OK_HEADER:
 			if err = b.parseEvent(s, data); err != nil {
 				s.closeWithError(err)
 				return
 			}
-		case ERR_HEADER:
+		case mysql.ERR_HEADER:
 			err = b.c.HandleErrorPacket(data)
 			s.closeWithError(err)
 			return

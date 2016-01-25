@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/juju/errors"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
 // Limiatation
@@ -46,12 +46,12 @@ func (h *MariadbGTIDHandler) FindBestSlaves(slaves []*Server) ([]*Server, error)
 		if len(str) == 0 {
 			seq = 0
 		} else {
-			g, err := ParseMariadbGTIDSet(str)
+			g, err := mysql.ParseMariadbGTIDSet(str)
 			if err != nil {
 				return nil, errors.Trace(err)
 			}
 
-			seq = g.(MariadbGTID).SequenceNumber
+			seq = g.(mysql.MariadbGTID).SequenceNumber
 		}
 
 		ps[i] = seq
@@ -73,7 +73,7 @@ func (h *MariadbGTIDHandler) FindBestSlaves(slaves []*Server) ([]*Server, error)
 	return bestSlaves, nil
 }
 
-const changeMasterToWithCurrentPos = `CHANGE MASTER TO 
+const changeMasterToWithCurrentPos = `CHANGE MASTER TO
     MASTER_HOST = "%s", MASTER_PORT = %s, 
     MASTER_USER = "%s", MASTER_PASSWORD = "%s", 
     MASTER_USE_GTID = current_pos`
@@ -118,7 +118,7 @@ func (h *MariadbGTIDHandler) WaitRelayLogDone(s *Server) error {
 	fname, _ := r.GetStringByName(0, "Master_Log_File")
 	pos, _ := r.GetIntByName(0, "Read_Master_Log_Pos")
 
-	return s.MasterPosWait(Position{fname, uint32(pos)}, 0)
+	return s.MasterPosWait(mysql.Position{fname, uint32(pos)}, 0)
 }
 
 func (h *MariadbGTIDHandler) WaitCatchMaster(s *Server, m *Server) error {

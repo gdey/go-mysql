@@ -3,24 +3,24 @@ package server
 import (
 	"fmt"
 
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
-func (c *Conn) writeOK(r *Result) error {
+func (c *Conn) writeOK(r *mysql.Result) error {
 	if r == nil {
-		r = &Result{}
+		r = &mysql.Result{}
 	}
 
 	r.Status |= c.status
 
 	data := make([]byte, 4, 32)
 
-	data = append(data, OK_HEADER)
+	data = append(data, mysql.OK_HEADER)
 
-	data = append(data, PutLengthEncodedInt(r.AffectedRows)...)
-	data = append(data, PutLengthEncodedInt(r.InsertId)...)
+	data = append(data, mysql.PutLengthEncodedInt(r.AffectedRows)...)
+	data = append(data, mysql.PutLengthEncodedInt(r.InsertId)...)
 
-	if c.capability&CLIENT_PROTOCOL_41 > 0 {
+	if c.capability&mysql.CLIENT_PROTOCOL_41 > 0 {
 		data = append(data, byte(r.Status), byte(r.Status>>8))
 		data = append(data, 0, 0)
 	}
@@ -29,18 +29,18 @@ func (c *Conn) writeOK(r *Result) error {
 }
 
 func (c *Conn) writeError(e error) error {
-	var m *MyError
+	var m *mysql.MyError
 	var ok bool
-	if m, ok = e.(*MyError); !ok {
-		m = NewError(ER_UNKNOWN_ERROR, e.Error())
+	if m, ok = e.(*mysql.MyError); !ok {
+		m = mysql.NewError(mysql.ER_UNKNOWN_ERROR, e.Error())
 	}
 
 	data := make([]byte, 4, 16+len(m.Message))
 
-	data = append(data, ERR_HEADER)
+	data = append(data, mysql.ERR_HEADER)
 	data = append(data, byte(m.Code), byte(m.Code>>8))
 
-	if c.capability&CLIENT_PROTOCOL_41 > 0 {
+	if c.capability&mysql.CLIENT_PROTOCOL_41 > 0 {
 		data = append(data, '#')
 		data = append(data, m.State...)
 	}
@@ -53,8 +53,8 @@ func (c *Conn) writeError(e error) error {
 func (c *Conn) writeEOF() error {
 	data := make([]byte, 4, 9)
 
-	data = append(data, EOF_HEADER)
-	if c.capability&CLIENT_PROTOCOL_41 > 0 {
+	data = append(data, mysql.EOF_HEADER)
+	if c.capability&mysql.CLIENT_PROTOCOL_41 > 0 {
 		data = append(data, 0, 0)
 		data = append(data, byte(c.status), byte(c.status>>8))
 	}
@@ -62,8 +62,8 @@ func (c *Conn) writeEOF() error {
 	return c.WritePacket(data)
 }
 
-func (c *Conn) writeResultset(r *Resultset) error {
-	columnLen := PutLengthEncodedInt(uint64(len(r.Fields)))
+func (c *Conn) writeResultset(r *mysql.Resultset) error {
+	columnLen := mysql.PutLengthEncodedInt(uint64(len(r.Fields)))
 
 	data := make([]byte, 4, 1024)
 
@@ -99,7 +99,7 @@ func (c *Conn) writeResultset(r *Resultset) error {
 	return nil
 }
 
-func (c *Conn) writeFieldList(fs []*Field) error {
+func (c *Conn) writeFieldList(fs []*mysql.Field) error {
 	data := make([]byte, 4, 1024)
 
 	for _, v := range fs {
@@ -126,13 +126,13 @@ func (c *Conn) writeValue(value interface{}) error {
 		return c.writeError(v)
 	case nil:
 		return c.writeOK(nil)
-	case *Result:
+	case *mysql.Result:
 		if v != nil && v.Resultset != nil {
 			return c.writeResultset(v.Resultset)
 		} else {
 			return c.writeOK(v)
 		}
-	case []*Field:
+	case []*mysql.Field:
 		return c.writeFieldList(v)
 	case *Stmt:
 		return c.writePrepare(v)

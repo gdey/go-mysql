@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
 func (c *Conn) writeInitialHandshake() error {
-	capability := CLIENT_LONG_PASSWORD | CLIENT_LONG_FLAG |
-		CLIENT_CONNECT_WITH_DB | CLIENT_PROTOCOL_41 |
-		CLIENT_TRANSACTIONS | CLIENT_SECURE_CONNECTION
+	capability := mysql.CLIENT_LONG_PASSWORD | mysql.CLIENT_LONG_FLAG |
+		mysql.CLIENT_CONNECT_WITH_DB | mysql.CLIENT_PROTOCOL_41 |
+		mysql.CLIENT_TRANSACTIONS | mysql.CLIENT_SECURE_CONNECTION
 
 	data := make([]byte, 4, 128)
 
@@ -18,7 +18,7 @@ func (c *Conn) writeInitialHandshake() error {
 	data = append(data, 10)
 
 	//server version[00]
-	data = append(data, ServerVersion...)
+	data = append(data, mysql.ServerVersion...)
 	data = append(data, 0)
 
 	//connection id
@@ -34,7 +34,7 @@ func (c *Conn) writeInitialHandshake() error {
 	data = append(data, byte(capability), byte(capability>>8))
 
 	//charset, utf-8 default
-	data = append(data, uint8(DEFAULT_COLLATION_ID))
+	data = append(data, uint8(mysql.DEFAULT_COLLATION_ID))
 
 	//status
 	data = append(data, byte(c.status), byte(c.status>>8))
@@ -86,7 +86,7 @@ func (c *Conn) readHandshakeResponse(password string) error {
 	pos += len(user) + 1
 
 	if c.user != user {
-		return NewDefaultError(ER_NO_SUCH_USER, user, c.RemoteAddr().String())
+		return mysql.NewDefaultError(mysql.ER_NO_SUCH_USER, user, c.RemoteAddr().String())
 	}
 
 	//auth length and auth
@@ -94,15 +94,15 @@ func (c *Conn) readHandshakeResponse(password string) error {
 	pos++
 	auth := data[pos : pos+authLen]
 
-	checkAuth := CalcPassword(c.salt, []byte(password))
+	checkAuth := mysql.CalcPassword(c.salt, []byte(password))
 
 	if !bytes.Equal(auth, checkAuth) {
-		return NewDefaultError(ER_ACCESS_DENIED_ERROR, c.RemoteAddr().String(), c.user, "Yes")
+		return mysql.NewDefaultError(mysql.ER_ACCESS_DENIED_ERROR, c.RemoteAddr().String(), c.user, "Yes")
 	}
 
 	pos += authLen
 
-	if c.capability|CLIENT_CONNECT_WITH_DB > 0 {
+	if c.capability|mysql.CLIENT_CONNECT_WITH_DB > 0 {
 		if len(data[pos:]) == 0 {
 			return nil
 		}

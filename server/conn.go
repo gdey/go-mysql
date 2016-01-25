@@ -4,7 +4,7 @@ import (
 	"net"
 	"sync/atomic"
 
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 	"github.com/siddontang/go-mysql/packet"
 	"github.com/siddontang/go/sync2"
 )
@@ -47,7 +47,7 @@ func NewConn(conn net.Conn, user string, password string, h Handler) (*Conn, err
 
 	c.stmts = make(map[uint32]*Stmt)
 
-	c.salt, _ = RandomBuf(20)
+	c.salt, _ = mysql.RandomBuf(20)
 
 	c.closed.Set(false)
 
@@ -97,17 +97,17 @@ func (c *Conn) ConnectionID() uint32 {
 }
 
 func (c *Conn) IsAutoCommit() bool {
-	return c.status&SERVER_STATUS_AUTOCOMMIT > 0
+	return c.status&mysql.SERVER_STATUS_AUTOCOMMIT > 0
 }
 
 func (c *Conn) IsInTransaction() bool {
-	return c.status&SERVER_STATUS_IN_TRANS > 0
+	return c.status&mysql.SERVER_STATUS_IN_TRANS > 0
 }
 
 func (c *Conn) SetInTransaction() {
-	c.status |= SERVER_STATUS_IN_TRANS
+	c.status |= mysql.SERVER_STATUS_IN_TRANS
 }
 
 func (c *Conn) ClearInTransaction() {
-	c.status &= ^SERVER_STATUS_IN_TRANS
+	c.status &= ^mysql.SERVER_STATUS_IN_TRANS
 }

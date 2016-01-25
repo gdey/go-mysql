@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/juju/errors"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 	"github.com/siddontang/go/hack"
 )
 
@@ -27,21 +27,21 @@ func (c *Conn) readUntilEOF() (err error) {
 }
 
 func (c *Conn) isEOFPacket(data []byte) bool {
-	return data[0] == EOF_HEADER && len(data) <= 5
+	return data[0] == mysql.EOF_HEADER && len(data) <= 5
 }
 
-func (c *Conn) handleOKPacket(data []byte) (*Result, error) {
+func (c *Conn) handleOKPacket(data []byte) (*mysql.Result, error) {
 	var n int
 	var pos int = 1
 
-	r := new(Result)
+	r := new(mysql.Result)
 
-	r.AffectedRows, _, n = LengthEncodedInt(data[pos:])
+	r.AffectedRows, _, n = mysql.LengthEncodedInt(data[pos:])
 	pos += n
-	r.InsertId, _, n = LengthEncodedInt(data[pos:])
+	r.InsertId, _, n = mysql.LengthEncodedInt(data[pos:])
 	pos += n
 
-	if c.capability&CLIENT_PROTOCOL_41 > 0 {
+	if c.capability&mysql.CLIENT_PROTOCOL_41 > 0 {
 		r.Status = binary.LittleEndian.Uint16(data[pos:])
 		c.status = r.Status
 		pos += 2
@@ -49,7 +49,7 @@ func (c *Conn) handleOKPacket(data []byte) (*Result, error) {
 		//todo:strict_mode, check warnings as error
 		//Warnings := binary.LittleEndian.Uint16(data[pos:])
 		//pos += 2
-	} else if c.capability&CLIENT_TRANSACTIONS > 0 {
+	} else if c.capability&mysql.CLIENT_TRANSACTIONS > 0 {
 		r.Status = binary.LittleEndian.Uint16(data[pos:])
 		c.status = r.Status
 		pos += 2
@@ -62,14 +62,14 @@ func (c *Conn) handleOKPacket(data []byte) (*Result, error) {
 }
 
 func (c *Conn) handleErrorPacket(data []byte) error {
-	e := new(MyError)
+	e := new(mysql.MyError)
 
 	var pos int = 1
 
 	e.Code = binary.LittleEndian.Uint16(data[pos:])
 	pos += 2
 
-	if c.capability&CLIENT_PROTOCOL_41 > 0 {
+	if c.capability&mysql.CLIENT_PROTOCOL_41 > 0 {
 		//skip '#'
 		pos++
 		e.State = hack.String(data[pos : pos+5])
@@ -81,55 +81,55 @@ func (c *Conn) handleErrorPacket(data []byte) error {
 	return e
 }
 
-func (c *Conn) readOK() (*Result, error) {
+func (c *Conn) readOK() (*mysql.Result, error) {
 	data, err := c.ReadPacket()
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	if data[0] == OK_HEADER {
+	if data[0] == mysql.OK_HEADER {
 		return c.handleOKPacket(data)
-	} else if data[0] == ERR_HEADER {
+	} else if data[0] == mysql.ERR_HEADER {
 		return nil, c.handleErrorPacket(data)
 	} else {
 		return nil, errors.New("invalid ok packet")
 	}
 }
 
-func (c *Conn) readResult(binary bool) (*Result, error) {
+func (c *Conn) readResult(binary bool) (*mysql.Result, error) {
 	data, err := c.ReadPacket()
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	if data[0] == OK_HEADER {
+	if data[0] == mysql.OK_HEADER {
 		return c.handleOKPacket(data)
-	} else if data[0] == ERR_HEADER {
+	} else if data[0] == mysql.ERR_HEADER {
 		return nil, c.handleErrorPacket(data)
-	} else if data[0] == LocalInFile_HEADER {
-		return nil, ErrMalformPacket
+	} else if data[0] == mysql.LocalInFile_HEADER {
+		return nil, mysql.ErrMalformPacket
 	}
 
 	return c.readResultset(data, binary)
 }
 
-func (c *Conn) readResultset(data []byte, binary bool) (*Result, error) {
-	result := &Result{
+func (c *Conn) readResultset(data []byte, binary bool) (*mysql.Result, error) {
+	result := &mysql.Result{
 		Status:       0,
 		InsertId:     0,
 		AffectedRows: 0,
 
-		Resultset: &Resultset{},
+		Resultset: &mysql.Resultset{},
 	}
 
 	// column count
-	count, _, n := LengthEncodedInt(data)
+	count, _, n := mysql.LengthEncodedInt(data)
 
 	if n-len(data) != 0 {
-		return nil, ErrMalformPacket
+		return nil, mysql.ErrMalformPacket
 	}
 
-	result.Fields = make([]*Field, count)
+	result.Fields = make([]*mysql.Field, count)
 	result.FieldNames = make(map[string]int, count)
 
 	if err := c.readResultColumns(result); err != nil {
@@ -143,7 +143,7 @@ func (c *Conn) readResultset(data []byte, binary bool) (*Result, error) {
 	return result, nil
 }
 
-func (c *Conn) readResultColumns(result *Result) (err error) {
+func (c *Conn) readResultColumns(result *mysql.Result) (err error) {
 	var i int = 0
 	var data []byte
 
@@ -155,7 +155,7 @@ func (c *Conn) readResultColumns(result *Result) (err error) {
 
 		// EOF Packet
 		if c.isEOFPacket(data) {
-			if c.capability&CLIENT_PROTOCOL_41 > 0 {
+			if c.capability&mysql.CLIENT_PROTOCOL_41 > 0 {
 				//result.Warnings = binary.LittleEndian.Uint16(data[1:])
 				//todo add strict_mode, warning will be treat as error
 				result.Status = binary.LittleEndian.Uint16(data[3:])
@@ -163,13 +163,13 @@ func (c *Conn) readResultColumns(result *Result) (err error) {
 			}
 
 			if i != len(result.Fields) {
-				err = ErrMalformPacket
+				err = mysql.ErrMalformPacket
 			}
 
 			return
 		}
 
-		result.Fields[i], err = FieldData(data).Parse()
+		result.Fields[i], err = mysql.FieldData(data).Parse()
 		if err != nil {
 			return
 		}
@@ -180,7 +180,7 @@ func (c *Conn) readResultColumns(result *Result) (err error) {
 	}
 }
 
-func (c *Conn) readResultRows(result *Result, isBinary bool) (err error) {
+func (c *Conn) readResultRows(result *mysql.Result, isBinary bool) (err error) {
 	var data []byte
 
 	for {
@@ -192,7 +192,7 @@ func (c *Conn) readResultRows(result *Result, isBinary bool) (err error) {
 
 		// EOF Packet
 		if c.isEOFPacket(data) {
-			if c.capability&CLIENT_PROTOCOL_41 > 0 {
+			if c.capability&mysql.CLIENT_PROTOCOL_41 > 0 {
 				//result.Warnings = binary.LittleEndian.Uint16(data[1:])
 				//todo add strict_mode, warning will be treat as error
 				result.Status = binary.LittleEndian.Uint16(data[3:])

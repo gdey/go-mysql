@@ -7,7 +7,7 @@ import (
 	"net"
 
 	"github.com/juju/errors"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/mysql"
 )
 
 /*
@@ -41,7 +41,7 @@ func (c *Conn) ReadPacket() ([]byte, error) {
 	// header := []byte{0, 0, 0, 0}
 
 	// if _, err := io.ReadFull(c.br, header); err != nil {
-	// 	return nil, ErrBadConn
+	// 	return nil, mysql.ErrBadConn
 	// }
 
 	// length := int(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
@@ -59,16 +59,16 @@ func (c *Conn) ReadPacket() ([]byte, error) {
 
 	// data := make([]byte, length)
 	// if _, err := io.ReadFull(c.br, data); err != nil {
-	// 	return nil, ErrBadConn
+	// 	return nil, mysql.ErrBadConn
 	// } else {
-	// 	if length < MaxPayloadLen {
+	// 	if length < mysql.MaxPayloadLen {
 	// 		return data, nil
 	// 	}
 
 	// 	var buf []byte
 	// 	buf, err = c.ReadPacket()
 	// 	if err != nil {
-	// 		return nil, ErrBadConn
+	// 		return nil, mysql.ErrBadConn
 	// 	} else {
 	// 		return append(data, buf...), nil
 	// 	}
@@ -79,7 +79,7 @@ func (c *Conn) ReadPacketTo(w io.Writer) error {
 	header := []byte{0, 0, 0, 0}
 
 	if _, err := io.ReadFull(c.br, header); err != nil {
-		return ErrBadConn
+		return mysql.ErrBadConn
 	}
 
 	length := int(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
@@ -96,11 +96,11 @@ func (c *Conn) ReadPacketTo(w io.Writer) error {
 	c.Sequence++
 
 	if n, err := io.CopyN(w, c.br, int64(length)); err != nil {
-		return ErrBadConn
+		return mysql.ErrBadConn
 	} else if n != int64(length) {
-		return ErrBadConn
+		return mysql.ErrBadConn
 	} else {
-		if length < MaxPayloadLen {
+		if length < mysql.MaxPayloadLen {
 			return nil
 		}
 
@@ -117,21 +117,21 @@ func (c *Conn) ReadPacketTo(w io.Writer) error {
 func (c *Conn) WritePacket(data []byte) error {
 	length := len(data) - 4
 
-	for length >= MaxPayloadLen {
+	for length >= mysql.MaxPayloadLen {
 		data[0] = 0xff
 		data[1] = 0xff
 		data[2] = 0xff
 
 		data[3] = c.Sequence
 
-		if n, err := c.Write(data[:4+MaxPayloadLen]); err != nil {
-			return ErrBadConn
-		} else if n != (4 + MaxPayloadLen) {
-			return ErrBadConn
+		if n, err := c.Write(data[:4+mysql.MaxPayloadLen]); err != nil {
+			return mysql.ErrBadConn
+		} else if n != (4 + mysql.MaxPayloadLen) {
+			return mysql.ErrBadConn
 		} else {
 			c.Sequence++
-			length -= MaxPayloadLen
-			data = data[MaxPayloadLen:]
+			length -= mysql.MaxPayloadLen
+			data = data[mysql.MaxPayloadLen:]
 		}
 	}
 
@@ -141,9 +141,9 @@ func (c *Conn) WritePacket(data []byte) error {
 	data[3] = c.Sequence
 
 	if n, err := c.Write(data); err != nil {
-		return ErrBadConn
+		return mysql.ErrBadConn
 	} else if n != len(data) {
-		return ErrBadConn
+		return mysql.ErrBadConn
 	} else {
 		c.Sequence++
 		return nil
