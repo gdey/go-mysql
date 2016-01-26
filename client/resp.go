@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/gdey/go-mysql/mysql"
-	"github.com/gdey/go/hack"
+	"github.com/siddontang/go/hack"
 	"github.com/juju/errors"
 )
 
