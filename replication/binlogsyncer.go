@@ -482,6 +482,18 @@ func (b *BinlogSyncer) replySemiSyncACK(p Position) error {
 	return errors.Trace(err)
 }
 
+func (b *BinlogSyncer) reconnect(s *BinlogStreamer) (err error) {
+	if err = b.ReRegisterSlave(); err != nil {
+		return err
+	}
+	if err = b.writeBinglogDumpCommand(b.nextPos); err != nil {
+		return err
+	}
+	b.wg.Add(1)
+	go b.onStream(s)
+	return
+}
+
 func (b *BinlogSyncer) onStream(s *BinlogStreamer) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -492,6 +504,14 @@ func (b *BinlogSyncer) onStream(s *BinlogStreamer) {
 
 	for {
 		data, err := b.c.ReadPacket()
+		// Lost network connection.
+		if err == ErrBadConn {
+			// attempt to reconnect.
+			if err = b.reconnect(s); err != nil {
+				s.closeWithError(err)
+			}
+			return
+		}
 		if err != nil {
 			s.closeWithError(err)
 			return
